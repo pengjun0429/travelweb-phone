@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="description" content="Travelweb手機版 — 旅遊行程規劃">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="https://travelweb-8kb.pages.dev/icon-180.png">
+<link rel="manifest" href="https://travelweb-8kb.pages.dev/manifest.json">
+<title>Travelweb</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+tailwind.config={theme:{extend:{colors:{primary:'#0ea5e9',secondary:'#10b981',dark:'#1e293b'}}}}
+</script>
+<style>
+*{-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overscroll-behavior:none}
+.safe-bottom{padding-bottom:env(safe-area-inset-bottom,0)}
+.view{display:none}.view.active{display:flex}
+.btn{border-radius:12px;font-weight:600;transition:all .15s;cursor:pointer}
+.btn:active{transform:scale(.97)}
+.bottom-nav{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding-bottom:env(safe-area-inset-bottom,0)}
+.bottom-nav button.active{color:#0ea5e9}
+.bottom-nav button.active i{transform:scale(1.1)}
+.day-scroll{-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.day-scroll::-webkit-scrollbar{display:none}
+.modal-overlay{background:rgba(0,0,0,.5);backdrop-filter:blur(4px)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-sheet{animation:slideUp .25s ease-out}
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+<div id="g_id_onload" data-client_id="1006606665070-26sq5tv532t84jqa2onivk26fbisnhl4.apps.googleusercontent.com" data-callback="handleGoogleSignIn" data-auto_prompt="false" data-itp_support="true"></div>
+
+<!-- LOGIN VIEW -->
+<div id="view-login" class="view active fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-sky-400 to-sky-600 p-6">
+  <div class="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
+    <i class="fa-solid fa-mountain-sun text-white text-3xl"></i>
+  </div>
+  <h1 class="text-2xl font-bold text-white mb-1">Travelweb</h1>
+  <p class="text-white/70 text-sm mb-8">旅遊行程規劃</p>
+  <div id="login-google-btn" class="w-full max-w-xs"></div>
+  <button onclick="lineLogin()" class="btn w-full max-w-xs mt-3 bg-[#06c755] hover:bg-[#05b34a] text-white py-3 flex items-center justify-center gap-2 text-sm">
+    <i class="fa-brands fa-line text-lg"></i> LINE 登入
+  </button>
+  <p class="text-white/50 text-xs mt-8">登入即表示同意服務條款</p>
+</div>
+
+<!-- MAIN VIEW (tabs) -->
+<div id="view-main" class="view fixed inset-0 flex-col">
+  <!-- Header -->
+  <header class="bg-white px-4 py-3 flex items-center justify-between shrink-0 border-b border-slate-100" style="padding-top:env(safe-area-inset-top,0)">
+    <div class="flex items-center gap-2">
+      <i class="fa-solid fa-mountain-sun text-primary text-lg"></i>
+      <span class="font-bold text-dark">Travelweb</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="user-badge" class="hidden bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">PREMIUM</span>
+      <img id="user-avatar" class="w-7 h-7 rounded-full border border-slate-200 hidden" src="">
+      <button onclick="logout()" class="text-slate-400 hover:text-red-500 text-sm p-1"><i class="fa-solid fa-sign-out-alt"></i></button>
+    </div>
+  </header>
+
+  <!-- Trips tab -->
+  <div id="tab-trips" class="tab-content flex-1 flex flex-col overflow-hidden">
+    <div class="p-4 pb-0 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-dark">我的行程</h2>
+      <button onclick="createTrip()" class="btn bg-primary text-white px-4 py-2 text-sm flex items-center gap-1"><i class="fa-solid fa-plus"></i> 新增</button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-4" id="trips-container">
+      <div class="text-center text-slate-400 py-16 text-sm">載入中...</div>
+    </div>
+  </div>
+
+  <!-- Profile tab -->
+  <div id="tab-profile" class="tab-content flex-1 flex-col overflow-y-auto p-4 hidden">
+    <div class="text-center mb-6">
+      <img id="profile-avatar" class="w-16 h-16 rounded-full mx-auto mb-2 border-2 border-slate-200" src="">
+      <h3 id="profile-name" class="font-bold text-lg">-</h3>
+      <p id="profile-email" class="text-sm text-slate-500">-</p>
+    </div>
+    <button onclick="openSettings()" class="btn w-full bg-white border border-slate-200 text-slate-700 py-3 mb-2 flex items-center gap-3 text-sm"><i class="fa-solid fa-gear text-slate-400"></i> 設定</button>
+    <button onclick="openLang()" class="btn w-full bg-white border border-slate-200 text-slate-700 py-3 mb-2 flex items-center gap-3 text-sm"><i class="fa-solid fa-globe text-slate-400"></i> 語言</button>
+  </div>
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav bg-white/95 border-t border-slate-100 flex shrink-0 safe-bottom">
+    <button onclick="switchTab('trips')" class="active flex-1 flex flex-col items-center py-2 text-xs text-slate-400 transition" id="nav-trips">
+      <i class="fa-solid fa-suitcase-rolling text-lg mb-0.5 transition"></i><span>行程</span>
+    </button>
+    <button onclick="switchTab('profile')" class="flex-1 flex flex-col items-center py-2 text-xs text-slate-400 transition" id="nav-profile">
+      <i class="fa-solid fa-user text-lg mb-0.5 transition"></i><span>個人</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ITINERARY VIEW -->
+<div id="view-itinerary" class="view fixed inset-0 flex-col bg-slate-50">
+  <header class="bg-white px-4 py-3 flex items-center gap-3 shrink-0 border-b border-slate-100" style="padding-top:env(safe-area-inset-top,0)">
+    <button onclick="closeItinerary()" class="text-slate-500 p-1"><i class="fa-solid fa-arrow-left text-lg"></i></button>
+    <div class="flex-1 min-w-0">
+      <h3 id="it-title" class="font-bold text-dark truncate text-sm">載入中</h3>
+      <p id="it-date" class="text-[10px] text-slate-400 truncate">-</p>
+    </div>
+    <button onclick="shareTrip()" class="text-slate-400 p-1"><i class="fa-solid fa-share-nodes"></i></button>
+  </header>
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <div class="day-scroll flex gap-2 p-3 bg-white border-b border-slate-100 overflow-x-auto shrink-0" id="day-tabs"></div>
+    <div class="flex-1 overflow-y-auto p-4" id="day-content"></div>
+  </div>
+</div>
+
+<!-- SETTINGS SHEET -->
+<div id="modal-settings" class="fixed inset-0 z-50 hidden" onclick="if(event.target===this)closeModal('modal-settings')">
+  <div class="modal-overlay absolute inset-0"></div>
+  <div class="modal-sheet absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl p-6 safe-bottom max-h-[80vh] overflow-y-auto">
+    <div class="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-4"></div>
+    <h3 class="font-bold text-lg mb-4">行程設定</h3>
+    <div class="space-y-3">
+      <div><label class="text-xs text-slate-500 mb-1 block">標題</label><input id="cfg-title" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+      <div><label class="text-xs text-slate-500 mb-1 block">日期區間</label><input id="cfg-date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="2026.07.03 - 07.16"></div>
+      <button onclick="saveSettings()" class="btn w-full bg-primary text-white py-3 text-sm mt-2">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="fixed bottom-24 left-4 right-4 z-50 bg-slate-800 text-white text-sm text-center px-4 py-3 rounded-xl shadow-lg transition-all duration-300 opacity-0 translate-y-4 pointer-events-none"></div>
+
+<script>
+const API='https://travel-api.pengjun0429.workers.dev';
+let user=null,trips=[],currentTrip=null,currentDay=0;
+
+// Auth
+function handleGoogleSignIn(r){const p=decodeJwt(r.credential);if(!p)return toast('登入失敗');setUser(p.email,p.name,p.picture);toast('歡迎 '+p.name);showMain()}
+function lineLogin(){const s=Math.random().toString(36).substring(2);localStorage.setItem('tw_line_state',s);location.href='https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=2010603361&redirect_uri='+API+'/auth/line/callback&state='+s+'&scope=openid%20profile%20email&nonce='+Math.random().toString(36).substring(2)}
+function decodeJwt(t){try{return JSON.parse(decodeURIComponent(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')))}catch(e){return null}}
+function genUid(e){let h=0;for(let i=0;i<e.length;i++)h=(h<<5)-h+e.charCodeAt(i),h|=0;return 'u'+Math.abs(h).toString(36)}
+function setUser(email,name,picture){const uid=genUid(email);user={email,name,picture,uid};['tw_user_email','tw_user_name','tw_user_picture','tw_user_uid'].forEach(k=>localStorage.setItem(k,{tw_user_email:email,tw_user_name:name,tw_user_picture:picture,tw_user_uid:uid}[k]))}
+function loadUser(){const e=localStorage.getItem('tw_user_email'),n=localStorage.getItem('tw_user_name'),p=localStorage.getItem('tw_user_picture'),u=localStorage.getItem('tw_user_uid');if(e&&n&&u){user={email:e,name:n,picture:p,uid:u};return true}return false}
+
+function showLogin(){showView('login')}
+function showMain(){showView('main');document.getElementById('user-avatar').src=user?.picture||'';document.getElementById('user-avatar').classList.toggle('hidden',!user);document.getElementById('profile-avatar').src=user?.picture||'';document.getElementById('profile-name').textContent=user?.name||'';document.getElementById('profile-email').textContent=user?.email||'';loadTrips()}
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById('view-'+id).classList.add('active')}
+function logout(){user=null;['tw_user_email','tw_user_name','tw_user_picture','tw_user_uid'].forEach(k=>localStorage.removeItem(k));showLogin()}
+
+function switchTab(t){document.querySelectorAll('.tab-content').forEach(c=>c.classList.add('hidden'));document.getElementById('tab-'+t).classList.remove('hidden');document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.remove('active'));document.getElementById('nav-'+t).classList.add('active')}
+
+// Trips
+async function loadTrips(){if(!user)return;const c=document.getElementById('trips-container');c.innerHTML='<div class="text-center text-slate-400 py-16 text-sm">載入中...</div>';try{const r=await fetch(API+'/api/trips?uid='+encodeURIComponent(user.uid)+'&email='+encodeURIComponent(user.email));const d=await r.json();trips=d.owned||[];renderTrips()}catch(e){c.innerHTML='<div class="text-center py-16"><p class="text-red-400 text-sm mb-2">載入失敗</p><button onclick="loadTrips()" class="text-primary text-sm underline">重試</button></div>'}}
+function renderTrips(){const c=document.getElementById('trips-container');if(!trips.length){c.innerHTML='<div class="text-center py-16 text-slate-400"><i class="fa-solid fa-suitcase-rolling text-3xl mb-3 block"></i><p class="text-sm">還沒有行程</p></div>';return}
+c.innerHTML=trips.map(t=>`<div onclick="openTrip('${t.trip_id}')" class="bg-white rounded-2xl p-4 mb-3 border border-slate-100 shadow-sm active:scale-[0.98] transition cursor-pointer">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0"><i class="fa-solid fa-suitcase-rolling"></i></div>
+    <div class="flex-1 min-w-0"><h3 class="font-bold text-dark truncate">${t.trip_title}</h3><p class="text-xs text-slate-400">${t.trip_date||'未設定日期'}</p></div>
+    <i class="fa-solid fa-chevron-right text-slate-300 text-sm"></i>
+  </div>
+</div>`).join('')}
+
+async function createTrip(){if(!user)return toast('請先登入');const title=prompt('行程名稱：','我的旅遊行程');if(!title)return;try{const r=await fetch(API+'/api/trip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ownerUid:user.uid,ownerEmail:user.email,tripTitle:title,tripDate:'',itineraryData:[],collaborators:[]})});const d=await r.json();if(d.tripId)openTrip(d.tripId);else toast(d.error||'建立失敗')}catch(e){toast('網路錯誤')}}
+
+// Itinerary
+async function openTrip(id){currentTrip=id;try{const r=await fetch(API+'/api/trip?trip_id='+id);const d=await r.json();if(d.empty)return toast('找不到行程');currentTrip=d;showView('itinerary');renderItinerary()}catch(e){toast('載入失敗')}}
+function closeItinerary(){currentTrip=null;showMain()}
+function renderItinerary(){const t=currentTrip;if(!t)return;document.getElementById('it-title').textContent=t.tripTitle;document.getElementById('it-date').textContent=t.tripDate||'';
+const days=t.itineraryData&&t.itineraryData.length?t.itineraryData:[{id:'d1',title:'第一天',date:new Date().toISOString().slice(0,10),hotel:'',food:'',notes:'',activities:[]}];
+const dt=document.getElementById('day-tabs');dt.innerHTML=days.map((d,i)=>`<button onclick="selectDay(${i})" class="shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition ${i===currentDay?'bg-primary text-white':'bg-slate-100 text-slate-600'}">Day ${i+1}</button>`).join('');
+selectDay(0)}
+function selectDay(i){currentDay=i;const t=currentTrip;if(!t||!t.itineraryData||!t.itineraryData[i])return;const d=t.itineraryData[i];document.querySelectorAll('#day-tabs button').forEach((b,j)=>b.className=j===i?'shrink-0 px-4 py-2 rounded-xl text-sm font-medium bg-primary text-white':'shrink-0 px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 text-slate-600');
+const c=document.getElementById('day-content');c.innerHTML=`
+<div class="mb-4"><p class="text-xs text-slate-400">${d.date||''}</p><h3 class="text-lg font-bold text-dark">${d.title}</h3></div>
+<div class="grid grid-cols-2 gap-3 mb-4">
+  <div class="bg-white rounded-xl p-3 border border-slate-100"><p class="text-[10px] text-slate-400 uppercase font-bold mb-1"><i class="fa-solid fa-bed mr-1"></i>住宿</p><p class="text-sm text-slate-700">${d.hotel||'無安排'}</p></div>
+  <div class="bg-white rounded-xl p-3 border border-slate-100"><p class="text-[10px] text-slate-400 uppercase font-bold mb-1"><i class="fa-solid fa-utensils mr-1"></i>餐飲</p><p class="text-sm text-slate-700">${d.food||'無安排'}</p></div>
+</div>
+<div class="space-y-3">${(d.activities||[]).map((a,j)=>`
+<div class="bg-white rounded-xl p-4 border border-slate-100 flex items-start gap-3">
+  <div class="w-1 bg-primary rounded-full h-full shrink-0 mt-0.5"></div>
+  <div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="text-xs font-bold text-slate-500">${a.time}</span><span class="text-sm font-bold text-dark truncate">${a.title}</span></div><p class="text-xs text-slate-400 mt-0.5">${a.desc||''}</p></div>
+</div>`).join('')||'<div class="text-center py-8 text-slate-400 text-sm">尚無景點</div>'}
+</div>
+<div class="mt-4 bg-amber-50 rounded-xl p-4 border border-amber-100"><p class="text-xs font-bold text-amber-800 mb-1"><i class="fa-solid fa-book-open mr-1"></i>備忘錄</p><p class="text-xs text-amber-700">${d.notes||'尚無備忘錄'}</p></div>`}
+
+function shareTrip(){if(!user||!currentTrip)return;const u=location.origin+location.pathname+'?trip='+currentTrip.tripId+'&guest=1';navigator.clipboard.writeText(u).then(()=>toast('已複製分享網址')).catch(()=>prompt('複製網址分享：',u))}
+
+// Settings
+function openSettings(){document.getElementById('cfg-title').value=currentTrip?.tripTitle||'';document.getElementById('cfg-date').value=currentTrip?.tripDate||'';document.getElementById('modal-settings').classList.remove('hidden')}
+async function saveSettings(){const t=document.getElementById('cfg-title').value.trim(),d=document.getElementById('cfg-date').value.trim();if(!t)return toast('標題不能為空');try{await fetch(API+'/api/trip',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tripId:currentTrip.tripId,ownerUid:user.uid,ownerEmail:user.email,tripTitle:t,tripDate:d,itineraryData:currentTrip.itineraryData,collaborators:currentTrip.collaborators})});currentTrip.tripTitle=t;currentTrip.tripDate=d;renderItinerary();closeModal('modal-settings');toast('已儲存')}catch(e){toast('網路錯誤')}}
+function closeModal(id){document.getElementById(id).classList.add('hidden')}
+function openLang(){toast('語言切換請至網頁版設定')}
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.remove('opacity-0','translate-y-4','pointer-events-none');t.classList.add('opacity-100','translate-y-0');setTimeout(()=>{t.classList.remove('opacity-100','translate-y-0');t.classList.add('opacity-0','translate-y-4','pointer-events-none')},2500)}
+
+// Init
+(function(){const p=new URLSearchParams(location.search);const lid=p.get('line_id'),lem=p.get('line_email'),lnm=p.get('line_name'),lpic=p.get('line_picture');if(lid){setUser(lem||lid+'@line.me',lnm||lid,lpic||'');history.replaceState({},'',location.pathname);showMain();return}
+if(loadUser()){showMain()}else{showLogin()}})()
+</script>
+</body>
+</html>
